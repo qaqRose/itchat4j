@@ -57,9 +57,18 @@ public class LoginServiceImpl implements ILoginService {
 	private MyHttpClient httpClient = core.getMyHttpClient();
 
 	private MyHttpClient myHttpClient = core.getMyHttpClient();
+	/**
+	 * 是否打开二维码
+	 * 默认打开
+	 */
+	private Boolean isOpenQrCode = false;
 
 	public LoginServiceImpl() {
 
+	}
+
+	public LoginServiceImpl(Boolean isOpenQrCode) {
+		this.isOpenQrCode = isOpenQrCode;
 	}
 
 	@Override
@@ -140,7 +149,9 @@ public class LoginServiceImpl implements ILoginService {
 			out.flush();
 			out.close();
 			try {
-				CommonTools.printQr(qrPath); // 打开登陆二维码图片
+				if(isOpenQrCode) {
+					CommonTools.printQr(qrPath); // 打开登陆二维码图片
+				}
 			} catch (Exception e) {
 				LOG.info(e.getMessage());
 			}

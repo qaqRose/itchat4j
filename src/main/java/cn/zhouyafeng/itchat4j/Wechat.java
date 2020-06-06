@@ -11,13 +11,22 @@ public class Wechat {
 	private static final Logger LOG = LoggerFactory.getLogger(Wechat.class);
 	private IMsgHandlerFace msgHandler;
 
+	private static boolean isRunning = true;
+
+	private LoginController loginController;
+	private String qrPath;
+
 	public Wechat(IMsgHandlerFace msgHandler, String qrPath) {
 		System.setProperty("jsse.enableSNIExtension", "false"); // 防止SSL错误
 		this.msgHandler = msgHandler;
-
+		this.qrPath = qrPath;
 		// 登陆
-		LoginController login = new LoginController();
-		login.login(qrPath);
+		loginController = new LoginController();
+
+	}
+
+	public void login() {
+		loginController.login(qrPath);
 	}
 
 	public void start() {
@@ -25,9 +34,18 @@ public class Wechat {
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
-				MsgCenter.handleMsg(msgHandler);
+				while(isRunning) {
+					MsgCenter.handleMsg(msgHandler);
+				}
 			}
 		}).start();
+	}
+
+	/**
+	 * 关闭所有线程
+	 */
+	public void stop() {
+		isRunning = false;
 	}
 
 }

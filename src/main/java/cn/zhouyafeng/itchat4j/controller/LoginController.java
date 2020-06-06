@@ -32,19 +32,23 @@ public class LoginController {
 		while (true) {
 			for (int count = 0; count < 10; count++) {
 				LOG.info("获取UUID");
-				while (loginService.getUuid() == null) {
+				// 尝试两次
+				if (loginService.getUuid() == null) {
 					LOG.info("1. 获取微信UUID");
-					while (loginService.getUuid() == null) {
-						LOG.warn("1.1. 获取微信UUID失败，两秒后重新获取");
-						SleepUtils.sleep(2000);
+					if (loginService.getUuid() == null) {
+						LOG.error("获取微信UUID失败, 返回");
+						return;
+//						LOG.warn("1.1. 获取微信UUID失败，两秒后重新获取");
+//						SleepUtils.sleep(2000);
 					}
 				}
-				LOG.info("2. 获取登陆二维码图片");
+				LOG.info("2. 获取登陆二维码图片, 第{}次", count + 1);
 				if (loginService.getQR(qrPath)) {
 					break;
 				} else if (count == 10) {
 					LOG.error("2.2. 获取登陆二维码图片失败，系统退出");
-					System.exit(0);
+//					System.exit(0);
+					return;
 				}
 			}
 			LOG.info("3. 请扫描二维码图片，并在手机上确认");
