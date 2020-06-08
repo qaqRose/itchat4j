@@ -1,5 +1,6 @@
 package cn.zhouyafeng.itchat4j.controller;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,6 +11,8 @@ import cn.zhouyafeng.itchat4j.service.impl.LoginServiceImpl;
 import cn.zhouyafeng.itchat4j.thread.CheckLoginStatusThread;
 import cn.zhouyafeng.itchat4j.utils.SleepUtils;
 import cn.zhouyafeng.itchat4j.utils.tools.CommonTools;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 登陆控制器
@@ -24,42 +27,68 @@ public class LoginController {
 	private ILoginService loginService = new LoginServiceImpl();
 	private static Core core = Core.getInstance();
 
+	/**
+	 * 登录标记
+	 * 默认为 true
+	 * false 则表示放弃此次登录
+	 */
+	private AtomicBoolean loginFlag = new AtomicBoolean(true);
+
 	public void login(String qrPath) {
+		// 初始化 loginFlag (因为login方法可复用)
+		loginFlag.set(true);
 		if (core.isAlive()) { // 已登陆
 			LOG.info("itchat4j已登陆");
 			return;
 		}
-		while (true) {
-			for (int count = 0; count < 10; count++) {
-				LOG.info("获取UUID");
-				// 尝试两次
-				if (loginService.getUuid() == null) {
-					LOG.info("1. 获取微信UUID");
-					if (loginService.getUuid() == null) {
-						LOG.error("获取微信UUID失败, 返回");
-						return;
-//						LOG.warn("1.1. 获取微信UUID失败，两秒后重新获取");
-//						SleepUtils.sleep(2000);
-					}
-				}
-				LOG.info("2. 获取登陆二维码图片, 第{}次", count + 1);
-				if (loginService.getQR(qrPath)) {
-					break;
-				} else if (count == 10) {
-					LOG.error("2.2. 获取登陆二维码图片失败，系统退出");
-//					System.exit(0);
-					return;
-				}
+		// uuid
+		while (loginFlag.get()) {
+			LOG.info("获取UUID");
+			String uuid = loginService.getUuid();
+			if (StringUtils.isBlank(uuid)) {
+				LOG.error("获取UUID失败");
+				SleepUtils.sleep(1000);
+			} else {
+				LOG.info("1. 获取微信UUID, {}", uuid);
+				break;
 			}
+		}
+
+		if(!loginFlag.get()) {
+			return;
+		}
+
+		// qr code
+		while (loginFlag.get()) {
+			LOG.info("2. 获取登陆二维码图片");
+			if (loginService.getQR(qrPath)) {
+				break;
+			} else {
+				LOG.error("获取二维码失败");
+				SleepUtils.sleep(1000);
+			}
+		}
+		if(!loginFlag.get()) {
+			return;
+		}
+
+		// wait for login by scan
+		while (loginFlag.get()) {
 			LOG.info("3. 请扫描二维码图片，并在手机上确认");
-			if (!core.isAlive()) {
-				loginService.login();
+			if(core.isAlive()) break;
+			boolean isLogin = loginService.login();
+			if(isLogin) {
 				core.setAlive(true);
 				LOG.info(("登陆成功"));
 				break;
+			} else {
+				SleepUtils.sleep(500);
 			}
-			LOG.info("4. 登陆超时，请重新扫描二维码图片");
 		}
+		if(!loginFlag.get()) {
+			return;
+		}
+//			LOG.info("4. 登陆超时，请重新扫描二维码图片");
 
 		LOG.info("5. 登陆成功，微信初始化");
 		if (!loginService.webWxInit()) {
@@ -89,4 +118,18 @@ public class LoginController {
 		LOG.info("12.开启微信状态检测线程");
 		new Thread(new CheckLoginStatusThread()).start();
 	}
+
+	/**
+	 *
+	 * @return true if cancel login success, else false
+	 */
+	public boolean cancelLogin() {
+		if(core.isAlive()) {
+			return false;
+		} else {
+			loginFlag.set(false);
+			return true;
+		}
+	}
+
 }

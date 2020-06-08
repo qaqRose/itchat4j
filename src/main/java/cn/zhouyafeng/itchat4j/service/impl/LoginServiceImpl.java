@@ -71,6 +71,10 @@ public class LoginServiceImpl implements ILoginService {
 		this.isOpenQrCode = isOpenQrCode;
 	}
 
+	/**
+	 * 获取是否扫码登录成功
+	 * @return true if login success
+	 */
 	@Override
 	public boolean login() {
 
@@ -82,7 +86,7 @@ public class LoginServiceImpl implements ILoginService {
 		params.add(new BasicNameValuePair(LoginParaEnum.TIP.para(), LoginParaEnum.TIP.value()));
 
 		// long time = 4000;
-		while (!isLogin) {
+//		while (!isLogin) {
 			// SleepUtils.sleep(time += 1000);
 			long millis = System.currentTimeMillis();
 			params.add(new BasicNameValuePair(LoginParaEnum.R.para(), String.valueOf(millis / 1579L)));
@@ -97,7 +101,6 @@ public class LoginServiceImpl implements ILoginService {
 					processLoginInfo(result); // 处理结果
 					isLogin = true;
 					core.setAlive(isLogin);
-					break;
 				}
 				if (ResultEnum.WAIT_CONFIRM.getCode().equals(status)) {
 					LOG.info("请点击微信确认按钮，进行登陆");
@@ -106,7 +109,7 @@ public class LoginServiceImpl implements ILoginService {
 			} catch (Exception e) {
 				LOG.error("微信登陆异常！", e);
 			}
-		}
+//		}
 		return isLogin;
 	}
 
