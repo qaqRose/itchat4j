@@ -82,6 +82,7 @@ public class LoginController {
 				LOG.info(("登陆成功"));
 				break;
 			} else {
+				LOG.info("等待扫码登录");
 				SleepUtils.sleep(500);
 			}
 		}
